@@ -53,6 +53,13 @@ Named group of modules. The name becomes a CSS ID selector.
 |---|---|
 | `name` | Unique name for CSS targeting (becomes `#name` selector). |
 | `modules` | Modules contained in this group. |
+| `drawer` | Optional boolean, default `false`. Keep the first module visible and animate the rest into view on hover or keyboard focus. |
+
+```toml
+right = [{ name = "connectivity", drawer = true, modules = ["network", "bluetooth", "volume"] }]
+```
+
+Drawers expand along the bar axis over 250 ms and collapse when both pointer and keyboard focus leave the group. The first module is the permanent handle; choose one that remains visible. Groups without `drawer = true` keep their existing behavior.
 
 ## BarItem {#bar-item}
 

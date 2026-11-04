@@ -172,6 +172,7 @@ impl LayoutCard {
     pub(super) fn on_add_group(&mut self, zone: ZoneId) -> bool {
         let group = BarGroup {
             name: t("settings-layout-default-group"),
+            drawer: false,
             modules: Vec::new(),
         };
         let item = BarItem::Group(group);

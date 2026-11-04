@@ -139,6 +139,9 @@ pub struct BarGroup {
     pub name: String,
     /// Modules contained in this group.
     pub modules: Vec<ModuleRef>,
+    /// Keep the first module visible and reveal the others on hover or keyboard focus.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub drawer: bool,
 }
 
 /// Reference to a module, optionally with a custom CSS class.
@@ -553,6 +556,29 @@ mod tests {
     use super::*;
 
     #[test]
+    fn drawer_groups_are_opt_in_and_roundtrip() {
+        let legacy: BarGroup =
+            toml::from_str("name = 'status'\nmodules = ['network', 'bluetooth']")
+                .expect("legacy group");
+        assert!(!legacy.drawer);
+        assert!(
+            !toml::to_string(&legacy)
+                .expect("serialize legacy group")
+                .contains("drawer")
+        );
+
+        let enabled: BarGroup =
+            toml::from_str("name = 'status'\nmodules = ['network', 'bluetooth']\ndrawer = true")
+                .expect("drawer group");
+        assert!(enabled.drawer);
+        let encoded = toml::to_string(&enabled).expect("serialize drawer group");
+        assert_eq!(
+            enabled,
+            toml::from_str::<BarGroup>(&encoded).expect("deserialize drawer group")
+        );
+    }
+
+    #[test]
     fn bar_layout_group_roundtrip() {
         let layout = BarLayout {
             monitor: String::from("DP-1"),
@@ -562,6 +588,7 @@ mod tests {
                 BarItem::Module(ModuleRef::Plain(BarModule::Clock)),
                 BarItem::Group(BarGroup {
                     name: String::from("status"),
+                    drawer: false,
                     modules: vec![ModuleRef::Plain(BarModule::Battery)],
                 }),
             ],
