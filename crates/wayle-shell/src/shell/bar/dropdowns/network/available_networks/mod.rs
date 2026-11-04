@@ -138,11 +138,17 @@ impl Component for AvailableNetworks {
                     },
                     #[template_child]
                     title {
-                        set_label: &t!("dropdown-network-no-adapter-title"),
+                        #[watch]
+                        set_label: &if model.network.wifi_adapters.get().is_empty() {
+                            t!("dropdown-network-no-adapter-title")
+                        } else { t!("dropdown-network-adapters-disabled-title") },
                     },
                     #[template_child]
                     description {
-                        set_label: &t!("dropdown-network-no-adapter-description"),
+                        #[watch]
+                        set_label: &if model.network.wifi_adapters.get().is_empty() {
+                            t!("dropdown-network-no-adapter-description")
+                        } else { t!("dropdown-network-adapters-disabled-description") },
                     },
                 },
             },

@@ -4821,8 +4821,6 @@ dependencies = [
 [[package]]
 name = "wayle-network"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f94efa40c4e13aec2a8b8e5e4aaf3432c58eb99d4232e2be86402df29dc0d952"
 dependencies = [
  "async-trait",
  "bitflags 2.10.0",

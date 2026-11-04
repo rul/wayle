@@ -45,3 +45,13 @@ dropdown-network-error-timeout = Connection timed out
 dropdown-network-error-ip-config = Failed to obtain IP address
 dropdown-network-error-not-found = Network not found
 dropdown-network-error-generic = Connection failed
+
+## Individual Wi-Fi adapters
+dropdown-network-adapters = Wi-Fi adapters
+dropdown-network-adapter-enabled = Enabled
+dropdown-network-adapter-disabled = Disabled
+dropdown-network-adapter-radio-off = Enabled · Wi-Fi is off
+dropdown-network-adapter-error = Could not change adapter state
+dropdown-network-adapter-unavailable = Unavailable
+dropdown-network-adapters-disabled-title = No enabled Wi-Fi adapter
+dropdown-network-adapters-disabled-description = Enable an adapter above to see available networks

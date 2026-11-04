@@ -145,3 +145,6 @@ unsafe_code = "deny"
 [profile.release]
 lto = true
 codegen-units = 1
+
+[patch.crates-io]
+wayle-network = { path = "vendor/wayle-network" }

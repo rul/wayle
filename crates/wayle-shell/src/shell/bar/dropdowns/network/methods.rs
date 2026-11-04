@@ -15,7 +15,10 @@ impl NetworkDropdown {
         let network = self.network.clone();
 
         sender.command(move |_out, _shutdown| async move {
-            if let Some(wifi) = network.wifi.get()
+            if let Some(wifi) = network
+                .wifi
+                .get()
+                .or_else(|| network.wifi_adapters.get().first().cloned())
                 && let Err(err) = wifi.set_enabled(active).await
             {
                 warn!(error = %err, "wifi toggle failed");

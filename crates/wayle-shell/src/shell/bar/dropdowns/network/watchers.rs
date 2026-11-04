@@ -19,7 +19,8 @@ pub(super) fn spawn(
     });
 
     let wifi = network.wifi.clone();
-    watch!(sender, [wifi.watch()], |out| {
+    let adapters = network.wifi_adapters.clone();
+    watch!(sender, [wifi.watch(), adapters.watch()], |out| {
         let _ = out.send(NetworkDropdownCmd::WifiDeviceChanged);
     });
 }
@@ -29,7 +30,11 @@ pub(super) fn spawn_wifi_watchers(
     network: &Arc<NetworkService>,
     token: CancellationToken,
 ) {
-    let Some(wifi) = network.wifi.get() else {
+    let Some(wifi) = network
+        .wifi
+        .get()
+        .or_else(|| network.wifi_adapters.get().first().cloned())
+    else {
         return;
     };
 

@@ -1,4 +1,5 @@
 mod active_connections;
+mod adapters;
 mod available_networks;
 mod factory;
 pub(crate) mod helpers;
@@ -31,6 +32,7 @@ pub(crate) struct NetworkDropdown {
     network: Arc<NetworkService>,
     scaled_width: i32,
     scaled_height: i32,
+    adapter_controls: Controller<adapters::WifiAdapters>,
     wifi_enabled: bool,
     wifi_available: bool,
     scanning: bool,
@@ -83,7 +85,7 @@ impl Component for NetworkDropdown {
                             add_css_class: "network-scan-btn",
                             set_icon_name: "tb-refresh-symbolic",
                             #[watch]
-                            set_visible: model.wifi_available && model.wifi_enabled,
+                            set_visible: model.wifi_available && model.wifi_enabled && model.network.wifi.get().is_some(),
                             #[watch]
                             set_sensitive: !model.scanning,
                             #[watch]
@@ -117,6 +119,9 @@ impl Component for NetworkDropdown {
                     set_vexpand: true,
 
                     #[local_ref]
+                    adapter_controls_widget -> gtk::Box {},
+
+                    #[local_ref]
                     active_connections_widget -> gtk::Box {},
 
                     #[local_ref]
@@ -145,7 +150,14 @@ impl Component for NetworkDropdown {
             })
             .forward(sender.input_sender(), NetworkDropdownMsg::AvailableNetworks);
 
-        let wifi = init.network.wifi.get();
+        let adapter_controls = adapters::WifiAdapters::builder()
+            .launch(init.network.clone())
+            .detach();
+        let wifi = init
+            .network
+            .wifi
+            .get()
+            .or_else(|| init.network.wifi_adapters.get().first().cloned());
         let wifi_available = wifi.is_some();
         let wifi_enabled = wifi.as_ref().is_some_and(|wifi| wifi.enabled.get());
 
@@ -161,12 +173,14 @@ impl Component for NetworkDropdown {
             wifi_available,
             scanning: false,
             active_connections,
+            adapter_controls,
             available_networks,
             wifi_watcher: WatcherToken::new(),
         };
 
         model.reset_wifi_watchers(&sender);
 
+        let adapter_controls_widget = model.adapter_controls.widget();
         let active_connections_widget = model.active_connections.widget();
         let available_networks_widget = model.available_networks.widget();
         let widgets = view_output!();
@@ -236,13 +250,17 @@ impl Component for NetworkDropdown {
             }
 
             NetworkDropdownCmd::WifiDeviceChanged => {
-                let wifi = self.network.wifi.get();
+                let wifi = self
+                    .network
+                    .wifi
+                    .get()
+                    .or_else(|| self.network.wifi_adapters.get().first().cloned());
                 self.wifi_available = wifi.is_some();
                 self.wifi_enabled = wifi.as_ref().is_some_and(|wifi| wifi.enabled.get());
 
                 self.available_networks
                     .emit(AvailableNetworksInput::WifiAvailabilityChanged(
-                        self.wifi_available,
+                        self.network.wifi.get().is_some(),
                     ));
 
                 self.reset_wifi_watchers(&sender);
