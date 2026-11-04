@@ -161,32 +161,30 @@ impl Component for Bar {
         let dropdowns = Rc::new(DropdownRegistry::new(&init.services));
         dropdowns.warm_all();
 
-        // Each monitor's bar owns its hover/focus state, including empty space.
+        // GTK retains widget focus after a window loses keyboard focus.
         let drawer_expanded = ConfigProperty::new(false);
         let motion = gtk::EventControllerMotion::new();
         let focus = gtk::EventControllerFocus::new();
-        let state = drawer_expanded.clone();
-        motion.connect_enter(move |_, _, _| state.set(true));
-        let state = drawer_expanded.clone();
-        let focus_state = focus.downgrade();
-        motion.connect_leave(move |_| {
-            state.set(
-                focus_state
-                    .upgrade()
-                    .is_some_and(|focus| focus.contains_focus()),
-            );
-        });
-        let state = drawer_expanded.clone();
-        focus.connect_enter(move |_| state.set(true));
-        let state = drawer_expanded.clone();
-        let motion_state = motion.downgrade();
-        focus.connect_leave(move |_| {
-            state.set(
-                motion_state
-                    .upgrade()
-                    .is_some_and(|motion| motion.contains_pointer()),
-            );
-        });
+        let sync_drawer = {
+            let state = drawer_expanded.clone();
+            let root = root.downgrade();
+            let motion = motion.downgrade();
+            let focus = focus.downgrade();
+            Rc::new(move || {
+                let (Some(root), Some(motion), Some(focus)) =
+                    (root.upgrade(), motion.upgrade(), focus.upgrade())
+                else {
+                    return;
+                };
+                state
+                    .set(motion.contains_pointer() || (root.is_active() && focus.contains_focus()));
+            })
+        };
+        let sync = sync_drawer.clone();
+        motion.connect_contains_pointer_notify(move |_| sync());
+        let sync = sync_drawer.clone();
+        focus.connect_contains_focus_notify(move |_| sync());
+        root.connect_is_active_notify(move |_| sync_drawer());
         let state = drawer_expanded.clone();
         root.connect_unmap(move |_| state.set(false));
         root.add_controller(motion);
