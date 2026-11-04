@@ -30,7 +30,7 @@ if [[ -f "docs/releases/v${VERSION}.md" ]]; then
 fi
 {
     echo "Version: ${VERSION}"
-    echo "Commit: $(git rev-parse HEAD)"
+    echo "Commit: $(git rev-parse HEAD 2>/dev/null || printf '%s' "${SOURCE_COMMIT:?Set SOURCE_COMMIT when building outside Git}")"
     echo "Architecture: ${ARCH}"
     . /etc/os-release
     echo "Build OS: ${PRETTY_NAME}"
