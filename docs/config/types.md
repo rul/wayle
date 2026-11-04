@@ -59,7 +59,7 @@ Named group of modules. The name becomes a CSS ID selector.
 right = [{ name = "connectivity", drawer = true, modules = ["network", "bluetooth", "volume"] }]
 ```
 
-Drawers expand along the bar axis over 250 ms and collapse when both pointer and keyboard focus leave the group. The first module is the permanent handle; choose one that remains visible. Groups without `drawer = true` keep their existing behavior.
+Drawers expand along the bar axis over 250 ms and collapse when both pointer and keyboard focus leave the group. The first module is the permanent handle; choose one that remains visible. Active night-light (`hyprsunset`) and caffeine (`idle-inhibit`) members remain visible when collapsed, updating immediately when their state changes (night light follows its existing one-second state polling). The first module remains the permanent handle even when inactive. Other module types collapse normally; toggle modules can opt into persistent visibility by maintaining the `drawer-active` CSS class on their root widget. Groups without `drawer = true` keep their existing behavior.
 
 ## BarItem {#bar-item}
 

@@ -1,6 +1,6 @@
 //! Bar item factory for creating modules and groups.
 
-use std::rc::Rc;
+use std::{cell::Cell, rc::Rc};
 
 use gtk::prelude::*;
 use relm4::prelude::*;
@@ -95,50 +95,8 @@ impl FactoryComponent for BarItemFactory {
 
         let drawer =
             matches!(&self.item, BarItem::Group(group) if group.drawer) && self.modules.len() > 1;
-        let contents = gtk::Box::new(orientation, 0);
-        contents.add_css_class("bar-group");
-        contents.add_css_class("drawer-contents");
-        let revealer = gtk::Revealer::builder()
-            .transition_duration(250)
-            .transition_type(if self.settings.is_vertical.get() {
-                gtk::RevealerTransitionType::SlideDown
-            } else {
-                gtk::RevealerTransitionType::SlideRight
-            })
-            .child(&contents)
-            .build();
-        if drawer {
-            root.add_css_class("bar-drawer");
-            let motion = gtk::EventControllerMotion::new();
-            let focus = gtk::EventControllerFocus::new();
-            let reveal = revealer.clone();
-            motion.connect_enter(move |_, _, _| {
-                reveal.set_reveal_child(true);
-            });
-            let reveal = revealer.clone();
-            let focus_state = focus.downgrade();
-            motion.connect_leave(move |_| {
-                reveal.set_reveal_child(
-                    focus_state
-                        .upgrade()
-                        .is_some_and(|focus| focus.contains_focus()),
-                );
-            });
-            let reveal = revealer.clone();
-            focus.connect_enter(move |_| reveal.set_reveal_child(true));
-            let reveal = revealer.clone();
-            let motion_state = motion.downgrade();
-            focus.connect_leave(move |_| {
-                reveal.set_reveal_child(
-                    motion_state
-                        .upgrade()
-                        .is_some_and(|motion| motion.contains_pointer()),
-                );
-            });
-            root.add_controller(motion);
-            root.add_controller(focus);
-        }
-
+        let expanded = Rc::new(Cell::new(false));
+        let mut members = Vec::new();
         for (index, instance) in self.modules.iter().enumerate() {
             let widget = instance.controller.widget();
             widget.add_css_class("module");
@@ -146,19 +104,80 @@ impl FactoryComponent for BarItemFactory {
                 widget.add_css_class(class);
             }
             if drawer && index > 0 {
+                let contents = gtk::Box::new(orientation, 0);
+                contents.add_css_class("drawer-contents");
                 contents.append(widget);
+                let revealer = gtk::Revealer::builder()
+                    .transition_duration(250)
+                    .transition_type(if self.settings.is_vertical.get() {
+                        gtk::RevealerTransitionType::SlideDown
+                    } else {
+                        gtk::RevealerTransitionType::SlideRight
+                    })
+                    .child(&contents)
+                    .reveal_child(widget.has_css_class("drawer-active"))
+                    .build();
+                root.append(&revealer);
+                let reveal = revealer.downgrade();
+                let expanded = expanded.clone();
+                widget.connect_notify_local(Some("css-classes"), move |widget, _| {
+                    if let Some(reveal) = reveal.upgrade() {
+                        reveal.set_reveal_child(drawer_member_visible(
+                            expanded.get(),
+                            widget.has_css_class("drawer-active"),
+                        ));
+                    }
+                });
+                members.push((revealer, widget.clone()));
             } else {
                 root.append(widget);
             }
 
-            let container = root.clone();
+            let container = root.downgrade();
             widget.connect_notify_local(Some("visible"), move |_, _| {
-                sync_container_visibility(&container);
+                if let Some(container) = container.upgrade() {
+                    sync_container_visibility(&container);
+                }
             });
         }
 
         if drawer {
-            root.append(&revealer);
+            root.add_css_class("bar-drawer");
+            let members = Rc::new(members);
+            let set_expanded: Rc<dyn Fn(bool)> = Rc::new(move |open| {
+                expanded.set(open);
+                for (reveal, widget) in members.iter() {
+                    reveal.set_reveal_child(drawer_member_visible(
+                        open,
+                        widget.has_css_class("drawer-active"),
+                    ));
+                }
+            });
+            let motion = gtk::EventControllerMotion::new();
+            let focus = gtk::EventControllerFocus::new();
+            let update = set_expanded.clone();
+            motion.connect_enter(move |_, _, _| update(true));
+            let update = set_expanded.clone();
+            let focus_state = focus.downgrade();
+            motion.connect_leave(move |_| {
+                update(
+                    focus_state
+                        .upgrade()
+                        .is_some_and(|focus| focus.contains_focus()),
+                );
+            });
+            let update = set_expanded.clone();
+            focus.connect_enter(move |_| update(true));
+            let motion_state = motion.downgrade();
+            focus.connect_leave(move |_| {
+                set_expanded(
+                    motion_state
+                        .upgrade()
+                        .is_some_and(|motion| motion.contains_pointer()),
+                );
+            });
+            root.add_controller(motion);
+            root.add_controller(focus);
         }
         sync_container_visibility(&root);
 
@@ -197,4 +216,26 @@ fn has_visible_module(widget: &gtk::Widget) -> bool {
         child = current.next_sibling();
     }
     false
+}
+
+// The first module is the handle. Other members stay revealed while active.
+fn drawer_member_visible(expanded: bool, active: bool) -> bool {
+    expanded || active
+}
+
+#[cfg(test)]
+mod tests {
+    use super::drawer_member_visible;
+
+    #[test]
+    fn collapsed_drawer_keeps_only_active_members() {
+        assert!(!drawer_member_visible(false, false));
+        assert!(drawer_member_visible(false, true));
+    }
+
+    #[test]
+    fn expanded_drawer_shows_all_members() {
+        assert!(drawer_member_visible(true, false));
+        assert!(drawer_member_visible(true, true));
+    }
 }

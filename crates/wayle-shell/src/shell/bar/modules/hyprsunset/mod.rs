@@ -39,6 +39,8 @@ impl Component for HyprsunsetModule {
     view! {
         gtk::Box {
             add_css_class: "hyprsunset",
+            #[watch]
+            set_class_active: ("drawer-active", model.enabled),
 
             #[local_ref]
             bar_button -> gtk::MenuButton {},

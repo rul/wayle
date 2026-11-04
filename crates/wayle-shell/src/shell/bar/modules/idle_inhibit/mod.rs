@@ -40,6 +40,8 @@ impl Component for IdleInhibitModule {
     view! {
         gtk::Box {
             add_css_class: "idle-inhibit",
+            #[watch]
+            set_class_active: ("drawer-active", model.state.active.get()),
 
             #[local_ref]
             bar_button -> gtk::MenuButton {},
