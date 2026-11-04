@@ -6,7 +6,10 @@ use std::rc::Rc;
 use gtk::prelude::*;
 use gtk4_layer_shell::{Edge, LayerShell};
 use relm4::{factory::FactoryVecDeque, gtk, gtk::gdk};
-use wayle_config::schemas::bar::{BarItem, BarLayout, Location};
+use wayle_config::{
+    ConfigProperty,
+    schemas::bar::{BarItem, BarLayout, Location},
+};
 use wayle_widgets::prelude::BarSettings;
 
 use super::{
@@ -132,6 +135,7 @@ impl Bar {
                 settings,
                 services,
                 dropdowns,
+                &self.drawer_expanded,
             );
         }
 
@@ -143,6 +147,7 @@ impl Bar {
                 settings,
                 services,
                 dropdowns,
+                &self.drawer_expanded,
             );
         }
 
@@ -154,6 +159,7 @@ impl Bar {
                 settings,
                 services,
                 dropdowns,
+                &self.drawer_expanded,
             );
         }
 
@@ -173,6 +179,7 @@ impl Bar {
 /// 2. **Place** - walk the new list by position. Skip if the right module
 ///    is already there, move it if it exists at a wrong position, or
 ///    create it if it's new.
+#[allow(clippy::too_many_arguments)]
 fn rebuild_section(
     factory: &mut FactoryVecDeque<BarItemFactory>,
     old_layout: &[BarItem],
@@ -180,6 +187,7 @@ fn rebuild_section(
     settings: &BarSettings,
     services: &ShellServices,
     dropdowns: &Rc<DropdownRegistry>,
+    drawer_expanded: &ConfigProperty<bool>,
 ) {
     let mut guard = factory.guard();
 
@@ -221,6 +229,7 @@ fn rebuild_section(
                         settings: settings.clone(),
                         services: services.clone(),
                         dropdowns: dropdowns.clone(),
+                        drawer_expanded: drawer_expanded.clone(),
                     },
                 );
             }

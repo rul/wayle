@@ -23,6 +23,7 @@ pub(crate) struct Bar {
     services: ShellServices,
     dropdowns: Rc<DropdownRegistry>,
     layout: BarLayout,
+    drawer_expanded: ConfigProperty<bool>,
     css_provider: gtk::CssProvider,
     last_css: String,
 
@@ -160,8 +161,40 @@ impl Component for Bar {
         let dropdowns = Rc::new(DropdownRegistry::new(&init.services));
         dropdowns.warm_all();
 
+        // Each monitor's bar owns its hover/focus state, including empty space.
+        let drawer_expanded = ConfigProperty::new(false);
+        let motion = gtk::EventControllerMotion::new();
+        let focus = gtk::EventControllerFocus::new();
+        let state = drawer_expanded.clone();
+        motion.connect_enter(move |_, _, _| state.set(true));
+        let state = drawer_expanded.clone();
+        let focus_state = focus.downgrade();
+        motion.connect_leave(move |_| {
+            state.set(
+                focus_state
+                    .upgrade()
+                    .is_some_and(|focus| focus.contains_focus()),
+            );
+        });
+        let state = drawer_expanded.clone();
+        focus.connect_enter(move |_| state.set(true));
+        let state = drawer_expanded.clone();
+        let motion_state = motion.downgrade();
+        focus.connect_leave(move |_| {
+            state.set(
+                motion_state
+                    .upgrade()
+                    .is_some_and(|motion| motion.contains_pointer()),
+            );
+        });
+        let state = drawer_expanded.clone();
+        root.connect_unmap(move |_| state.set(false));
+        root.add_controller(motion);
+        root.add_controller(focus);
+
         let mut model = Self {
             settings,
+            drawer_expanded,
             services: init.services,
             dropdowns,
             layout: BarLayout {

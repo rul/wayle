@@ -53,13 +53,15 @@ Named group of modules. The name becomes a CSS ID selector.
 |---|---|
 | `name` | Unique name for CSS targeting (becomes `#name` selector). |
 | `modules` | Modules contained in this group. |
-| `drawer` | Optional boolean, default `false`. Keep the first module visible and animate the rest into view on hover or keyboard focus. |
+| `drawer` | Optional boolean, default `false`. Reveal all members on bar hover or keyboard focus; keep active toggles visible when collapsed. |
 
 ```toml
 right = [{ name = "connectivity", drawer = true, modules = ["network", "bluetooth", "volume"] }]
 ```
 
-Drawers expand along the bar axis over 250 ms and collapse when both pointer and keyboard focus leave the group. The first module is the permanent handle; choose one that remains visible. Active night-light (`hyprsunset`) and caffeine (`idle-inhibit`) members remain visible when collapsed, updating immediately when their state changes (night light follows its existing one-second state polling). The first module remains the permanent handle even when inactive. Other module types collapse normally; toggle modules can opt into persistent visibility by maintaining the `drawer-active` CSS class on their root widget. Groups without `drawer = true` keep their existing behavior.
+Drawers expand along the bar axis over 250 ms when the pointer or keyboard focus enters any part of that monitor's bar, including its empty space. All drawers on that bar expand together. When both pointer and focus leave, inactive members collapse, including the first member. No permanent handle is needed; a drawer with no active members disappears completely. Single-module drawers behave the same way.
+
+Active night-light (`hyprsunset`) and caffeine (`idle-inhibit`) members remain visible when collapsed, updating when their state changes (night light follows its existing one-second state polling). Other module types collapse normally; toggle modules can opt into persistent visibility by maintaining the `drawer-active` CSS class on their root widget. Groups without `drawer = true` keep their existing behavior.
 
 ## BarItem {#bar-item}
 

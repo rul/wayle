@@ -4,7 +4,7 @@ use std::{cell::Cell, rc::Rc};
 
 use gtk::prelude::*;
 use relm4::prelude::*;
-use wayle_config::schemas::bar::BarItem;
+use wayle_config::{ConfigProperty, schemas::bar::BarItem};
 use wayle_widgets::prelude::BarSettings;
 
 use crate::shell::{
@@ -17,6 +17,7 @@ use crate::shell::{
 
 pub(crate) struct BarItemFactoryInit {
     pub(crate) item: BarItem,
+    pub(crate) drawer_expanded: ConfigProperty<bool>,
     pub(crate) settings: BarSettings,
     pub(crate) services: ShellServices,
     pub(crate) dropdowns: Rc<DropdownRegistry>,
@@ -30,6 +31,8 @@ pub(crate) struct BarItemFactory {
     #[allow(dead_code)]
     dropdowns: Rc<DropdownRegistry>,
     modules: Vec<ModuleInstance>,
+    expanded: Rc<Cell<bool>>,
+    members: Vec<(gtk::Revealer, gtk::Box)>,
 }
 
 #[relm4::factory(pub(crate))]
@@ -37,7 +40,7 @@ impl FactoryComponent for BarItemFactory {
     type Init = BarItemFactoryInit;
     type Input = ();
     type Output = ();
-    type CommandOutput = ();
+    type CommandOutput = bool;
     type ParentWidget = gtk::Box;
 
     view! {
@@ -47,7 +50,7 @@ impl FactoryComponent for BarItemFactory {
         }
     }
 
-    fn init_model(init: Self::Init, _index: &DynamicIndex, _sender: FactorySender<Self>) -> Self {
+    fn init_model(init: Self::Init, _index: &DynamicIndex, sender: FactorySender<Self>) -> Self {
         let modules = match &init.item {
             BarItem::Module(module) => {
                 create_module(module, &init.settings, &init.services, &init.dropdowns)
@@ -63,7 +66,16 @@ impl FactoryComponent for BarItemFactory {
                 .collect(),
         };
 
+        let expanded = Rc::new(Cell::new(init.drawer_expanded.get()));
+        let drawer_expanded = init.drawer_expanded;
+        if matches!(&init.item, BarItem::Group(group) if group.drawer) {
+            wayle_widgets::watch!(sender, [drawer_expanded.watch()], |out| {
+                let _ = out.send(drawer_expanded.get());
+            });
+        }
         Self {
+            expanded,
+            members: Vec::new(),
             item: init.item,
             settings: init.settings,
             services: init.services,
@@ -93,17 +105,16 @@ impl FactoryComponent for BarItemFactory {
             root.add_css_class("bar-group");
         }
 
-        let drawer =
-            matches!(&self.item, BarItem::Group(group) if group.drawer) && self.modules.len() > 1;
-        let expanded = Rc::new(Cell::new(false));
+        let drawer = matches!(&self.item, BarItem::Group(group) if group.drawer);
+        let expanded = self.expanded.clone();
         let mut members = Vec::new();
-        for (index, instance) in self.modules.iter().enumerate() {
+        for instance in &self.modules {
             let widget = instance.controller.widget();
             widget.add_css_class("module");
             if let Some(class) = &instance.class {
                 widget.add_css_class(class);
             }
-            if drawer && index > 0 {
+            if drawer {
                 let contents = gtk::Box::new(orientation, 0);
                 contents.add_css_class("drawer-contents");
                 contents.append(widget);
@@ -115,9 +126,33 @@ impl FactoryComponent for BarItemFactory {
                         gtk::RevealerTransitionType::SlideRight
                     })
                     .child(&contents)
-                    .reveal_child(widget.has_css_class("drawer-active"))
+                    .reveal_child(drawer_member_visible(
+                        expanded.get(),
+                        widget.has_css_class("drawer-active"),
+                    ))
                     .build();
+                revealer.set_class_active("drawer-visible", revealer.reveals_child());
                 root.append(&revealer);
+                let container = root.downgrade();
+                revealer.connect_reveal_child_notify(move |reveal| {
+                    reveal.set_class_active(
+                        "drawer-visible",
+                        reveal.reveals_child() || reveal.is_child_revealed(),
+                    );
+                    if let Some(container) = container.upgrade() {
+                        sync_container_visibility(&container);
+                    }
+                });
+                let container = root.downgrade();
+                revealer.connect_child_revealed_notify(move |reveal| {
+                    reveal.set_class_active(
+                        "drawer-visible",
+                        reveal.reveals_child() || reveal.is_child_revealed(),
+                    );
+                    if let Some(container) = container.upgrade() {
+                        sync_container_visibility(&container);
+                    }
+                });
                 let reveal = revealer.downgrade();
                 let expanded = expanded.clone();
                 widget.connect_notify_local(Some("css-classes"), move |widget, _| {
@@ -143,45 +178,21 @@ impl FactoryComponent for BarItemFactory {
 
         if drawer {
             root.add_css_class("bar-drawer");
-            let members = Rc::new(members);
-            let set_expanded: Rc<dyn Fn(bool)> = Rc::new(move |open| {
-                expanded.set(open);
-                for (reveal, widget) in members.iter() {
-                    reveal.set_reveal_child(drawer_member_visible(
-                        open,
-                        widget.has_css_class("drawer-active"),
-                    ));
-                }
-            });
-            let motion = gtk::EventControllerMotion::new();
-            let focus = gtk::EventControllerFocus::new();
-            let update = set_expanded.clone();
-            motion.connect_enter(move |_, _, _| update(true));
-            let update = set_expanded.clone();
-            let focus_state = focus.downgrade();
-            motion.connect_leave(move |_| {
-                update(
-                    focus_state
-                        .upgrade()
-                        .is_some_and(|focus| focus.contains_focus()),
-                );
-            });
-            let update = set_expanded.clone();
-            focus.connect_enter(move |_| update(true));
-            let motion_state = motion.downgrade();
-            focus.connect_leave(move |_| {
-                set_expanded(
-                    motion_state
-                        .upgrade()
-                        .is_some_and(|motion| motion.contains_pointer()),
-                );
-            });
-            root.add_controller(motion);
-            root.add_controller(focus);
         }
+        self.members = members;
         sync_container_visibility(&root);
 
         widgets
+    }
+
+    fn update_cmd(&mut self, expanded: bool, _sender: FactorySender<Self>) {
+        self.expanded.set(expanded);
+        for (reveal, widget) in &self.members {
+            reveal.set_reveal_child(drawer_member_visible(
+                expanded,
+                widget.has_css_class("drawer-active"),
+            ));
+        }
     }
 }
 
@@ -205,6 +216,11 @@ fn has_visible_module(widget: &gtk::Widget) -> bool {
     if !widget.get_visible() {
         return false;
     }
+    if let Some(reveal) = widget.downcast_ref::<gtk::Revealer>() {
+        if !reveal.reveals_child() && !reveal.is_child_revealed() {
+            return false;
+        }
+    }
     if widget.has_css_class("module") {
         return true;
     }
@@ -218,7 +234,7 @@ fn has_visible_module(widget: &gtk::Widget) -> bool {
     false
 }
 
-// The first module is the handle. Other members stay revealed while active.
+// All drawer members stay revealed while the bar is hovered/focused or active.
 fn drawer_member_visible(expanded: bool, active: bool) -> bool {
     expanded || active
 }

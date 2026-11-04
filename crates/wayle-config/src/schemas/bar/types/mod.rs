@@ -139,7 +139,7 @@ pub struct BarGroup {
     pub name: String,
     /// Modules contained in this group.
     pub modules: Vec<ModuleRef>,
-    /// Keep the first module visible and reveal the others on hover or keyboard focus.
+    /// Reveal all members when the bar is hovered or focused; keep active toggles visible.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub drawer: bool,
 }

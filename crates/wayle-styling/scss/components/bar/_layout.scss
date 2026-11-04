@@ -30,15 +30,15 @@
     }
 }
 
-// Include the handle-to-drawer gap inside the animated region.
+// Keep spacing inside the animation, and only after a visible member.
 .bar.top, .bar.bottom {
-    .bar-drawer > revealer > .drawer-contents > .module:first-child {
+    .bar-drawer > revealer.drawer-visible ~ revealer > .drawer-contents > .module:first-child {
         margin-left: calc(var(--bar-group-module-gap-px) * 1px);
     }
 }
 
 .bar.left, .bar.right {
-    .bar-drawer > revealer > .drawer-contents > .module:first-child {
+    .bar-drawer > revealer.drawer-visible ~ revealer > .drawer-contents > .module:first-child {
         margin-top: calc(var(--bar-group-module-gap-px) * 1px);
     }
 }
