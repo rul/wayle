@@ -24,14 +24,10 @@ label.clock-separator {
 }
 
 @keyframes blink {
-    0%,
-    50% {
-        opacity: 1;
-    }
-    51%,
-    100% {
-        opacity: 0.3;
-    }
+    0% { opacity: 1; }
+    50% { opacity: 1; }
+    51% { opacity: 0.3; }
+    100% { opacity: 0.3; }
 }
 
 label.clock-ampm {
