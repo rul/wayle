@@ -47,7 +47,6 @@ impl WidgetTemplate for NotificationContentTemplate {
             gtk::Label {
                 add_css_class: "notification-popup-body",
                 set_halign: gtk::Align::Start,
-                set_use_markup: true,
                 set_wrap: true,
                 set_wrap_mode: pango::WrapMode::WordChar,
                 set_max_width_chars: MAX_WIDTH_CHARS,

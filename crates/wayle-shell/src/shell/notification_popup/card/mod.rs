@@ -13,7 +13,7 @@ use wayle_notification::{NotificationService, core::notification::Notification};
 
 use super::{
     helpers::{
-        ResolvedIcon, relative_time, resolve_icon, sanitize_markup, urgency_bar_visible,
+        ResolvedIcon, popup_preview, relative_time, resolve_icon, urgency_bar_visible,
         urgency_css_class,
     },
     templates::NotificationContentTemplate,
@@ -105,7 +105,7 @@ impl Component for NotificationPopupCard {
                             .body
                             .get()
                             .as_deref()
-                            .map_or_else(String::new, sanitize_markup),
+                            .map_or_else(String::new, popup_preview),
                         set_visible: model.notification.body.get().is_some(),
                     },
                 },

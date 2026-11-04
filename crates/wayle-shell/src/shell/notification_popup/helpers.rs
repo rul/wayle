@@ -20,6 +20,14 @@ pub(crate) fn sanitize_markup(text: &str) -> String {
     glib::markup_escape_text(text).into()
 }
 
+/// Flatten popup text so the three-line limit covers the whole preview.
+pub(crate) fn popup_preview(text: &str) -> String {
+    let plain = pango::parse_markup(text, '\0')
+        .map(|(_, text, _)| text.to_string())
+        .unwrap_or_else(|_| text.to_owned());
+    plain.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 /// Resolved notification icon.
 #[derive(Debug, Clone)]
 pub(crate) enum ResolvedIcon {
@@ -293,5 +301,18 @@ mod tests {
     fn sanitize_markup_escapes_mixed_invalid() {
         let raw = "<b>bold</b> & more";
         assert_eq!(sanitize_markup(raw), "&lt;b&gt;bold&lt;/b&gt; &amp; more");
+    }
+
+    #[test]
+    fn popup_preview_flattens_paragraphs_and_encoded_newlines() {
+        assert_eq!(
+            popup_preview("one\n\n<b>two</b>&#10;three\u{2028}four"),
+            "one two three four"
+        );
+    }
+
+    #[test]
+    fn popup_preview_handles_invalid_markup() {
+        assert_eq!(popup_preview("NixOS & Module\nnext"), "NixOS & Module next");
     }
 }
