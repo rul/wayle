@@ -69,7 +69,7 @@ jobs:
           mkdir -p dist
           cp "wayle-$VERSION-x86_64-linux.tar.gz" dist/
           cp debbuild/DEBS/amd64/*.deb dist/
-          cp docs/releases/v0.7.1-rul.1.md dist/RELEASE-NOTES.md
+          cp "docs/releases/v$VERSION.md" dist/RELEASE-NOTES.md
           cd dist
           sha256sum *.tar.gz *.deb > SHA256SUMS
           sha256sum -c SHA256SUMS
