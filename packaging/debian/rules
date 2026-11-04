@@ -39,3 +39,7 @@ override_dh_auto_install:
 
 	install -d debian/wayle/usr/share/fish/vendor_completions.d
 	install -m 0644 completions/wayle.fish debian/wayle/usr/share/fish/vendor_completions.d/wayle.fish
+
+	install -d debian/wayle/usr/share/doc/wayle
+	if [ -d licenses ]; then cp -r licenses debian/wayle/usr/share/doc/wayle/; fi
+	if [ -f BUILD-INFO.txt ]; then install -m 0644 BUILD-INFO.txt debian/wayle/usr/share/doc/wayle/; fi

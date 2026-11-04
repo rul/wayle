@@ -21,6 +21,23 @@ cd "$PROJECT_DIR"
 STAGING="wayle-${VERSION}-${ARCH}-linux"
 mkdir -p "${STAGING}/icons" "${STAGING}/completions"
 cp "${TARGET_DIR}/wayle" "${TARGET_DIR}/wayle-settings" LICENSE "${STAGING}/"
+mkdir -p "${STAGING}/licenses"
+if [[ -f vendor/wayle-network/LICENSE ]]; then
+    cp vendor/wayle-network/LICENSE "${STAGING}/licenses/wayle-network.txt"
+fi
+if [[ -f "docs/releases/v${VERSION}.md" ]]; then
+    cp "docs/releases/v${VERSION}.md" "${STAGING}/INSTALL.md"
+fi
+{
+    echo "Version: ${VERSION}"
+    echo "Commit: $(git rev-parse HEAD)"
+    echo "Architecture: ${ARCH}"
+    . /etc/os-release
+    echo "Build OS: ${PRETTY_NAME}"
+    echo "Rust: $(rustc --version)"
+    echo "GTK: $(pkg-config --modversion gtk4)"
+    echo "glibc: $(getconf GNU_LIBC_VERSION)"
+} > "${STAGING}/BUILD-INFO.txt"
 cp -r resources/icons/hicolor "${STAGING}/icons/"
 cp completions.bash _wayle wayle.fish "${STAGING}/completions/"
 cp resources/wayle.service "${STAGING}/"

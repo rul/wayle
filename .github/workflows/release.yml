@@ -12,6 +12,7 @@ env:
 
 jobs:
     changelog:
+        if: github.repository == 'wayle-rs/wayle'
         name: Changelog
         runs-on: ubuntu-latest
         outputs:
